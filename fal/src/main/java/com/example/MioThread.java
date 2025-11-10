@@ -48,7 +48,10 @@ public class MioThread extends Thread {
                 // String cmd = in.readLine().substring(0, 3);
                 String linea = in.readLine();
                 cmd = linea.split(" ", 2);
+
                 if (cmd[0].equals("QUIT")) {
+                    out.println("BYE");
+                    socket.close();
                     break;
                 }
 
@@ -58,20 +61,20 @@ public class MioThread extends Thread {
                         if (cmd[1] != null) {
                             synchronized (lavagna) {
                                 lavagna.add(new Messaggio(cmd[1], utente));
+                                out.println("OK");
                             }
-                            out.println("OK");
                         }
                         break;
 
                     case "DEL":
-                        int index = Integer.parseInt(in.readLine());
+                        int index = Integer.parseInt(cmd[1]);
                         synchronized (lavagna) {
-                            if (index >= 0 && index < lavagna.size()) {
+                            if (index >= 0 && index <= lavagna.size()) {
                                 lavagna.remove(index);
-                                out.println("MSG " + index + " DELETED BY " + utente);
                             } else {
                                 out.println("ERR INVALIDINDEX");
                             }
+
                         }
                         break;
 
@@ -89,11 +92,6 @@ public class MioThread extends Thread {
                             }
                         }
                         break;
-
-                    case "QUIT":
-                        out.println("BYE");
-                        socket.close();
-                        return;
 
                     default:
                         out.println("ERR UNKNOWNCMD");
