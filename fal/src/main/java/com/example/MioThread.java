@@ -1,87 +1,103 @@
 package com.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 
 public class MioThread extends Thread {
 
-    Socket socket;
+    private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
+    private static ArrayList<Messaggio> lavagna = new ArrayList<>();
 
     public MioThread(Socket s) throws IOException {
         socket = s;
-        in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new PrintWriter(socket.getOutputStream(), true);
     }
-    ArrayList<Messaggio> lavagna = new ArrayList<>();
 
     @Override
     public void run() {
         String utente = "";
+
         try {
-            boolean success = false;
-            String login[] = {"", ""};
             out.println("WELCOME");
+
+            // --- LOGIN ---
+            boolean success = false;
             while (!success) {
-                try {
-                    String messaggio = in.readLine();
-                    login = messaggio.split(" ", 2);
-                } catch (Exception e) {
+                String messaggio = in.readLine();
+                if (messaggio == null) {
+                    break;
                 }
-                if (login[0].equals("LOGIN") || login[1].isBlank()) {
-                    success = true;
+                String[] login = messaggio.split(" ", 2);
+
+                if (login.length == 2 && login[0].equals("LOGIN") && !login[1].isBlank()) {
                     utente = login[1];
+                    success = true;
+                    out.println("LOGIN OK " + utente);
+                } else {
                     out.println("ERR LOGINREQUIRED");
                 }
             }
 
+            // --- LOOP PRINCIPALE ---
             while (true) {
-
-                String msg = in.readLine();
-                if (!msg.equals("QUIT")) {
-
-                    out.println("BYE");
-                    socket.close();
+                String cmd = in.readLine();
+                if (cmd == null) {
                     break;
                 }
 
-                switch (msg) {
+                switch (cmd) {
                     case "ADD":
-                        Messaggio messaggio = new Messaggio(in.readLine(), utente);
-                        lavagna.add(messaggio);
+                        String testo = in.readLine();
+                        if (testo != null) {
+                            synchronized (lavagna) {
+                                lavagna.add(new Messaggio(testo, utente));
+                            }
+                            out.println("MSG ADDED");
+                        }
                         break;
 
                     case "DEL":
                         int index = Integer.parseInt(in.readLine());
-                        lavagna.remove(index);
-                        out.println(utente + " ha cancellato messaggio index " + index);
+                        synchronized (lavagna) {
+                            if (index >= 0 && index < lavagna.size()) {
+                                lavagna.remove(index);
+                                out.println("MSG " + index + " DELETED BY " + utente);
+                            } else {
+                                out.println("ERR INVALIDINDEX");
+                            }
+                        }
                         break;
 
                     case "VIEW":
-                        String s = "BOARD :\n";
-                        if (lavagna.isEmpty()) {
-                            out.println("BOARD EMPTY");
-                        } else {
-                            for (Messaggio elem : lavagna) {
-                                s += "AUTORE: " + elem.getAutore() + "\nCONTENUTO: " + elem.getTesto() + "\n";
+                        synchronized (lavagna) {
+                            if (lavagna.isEmpty()) {
+                                out.println("BOARD EMPTY");
+                            } else {
+                                out.println("BOARD:");
+                                for (int i = 0; i < lavagna.size(); i++) {
+                                    Messaggio m = lavagna.get(i);
+                                    out.println(i + ") " + m.getAutore() + ": " + m.getTesto());
+                                }
                             }
-                            out.println(s);
                         }
-
                         break;
 
+                    case "QUIT":
+                        out.println("BYE");
+                        socket.close();
+                        return;
+
                     default:
-                        out.println("ERR");
+                        out.println("ERR UNKNOWNCMD");
                         break;
                 }
             }
-        } catch (IOException ex) {
+        } catch (IOException e) {
+            System.err.println("Errore nel thread: " + e.getMessage());
         }
-
     }
-
 }
