@@ -33,30 +33,33 @@ public class MioThread extends Thread {
                 }
                 String[] login = messaggio.split(" ", 2);
 
-                if (login.length == 2 && login[0].equals("LOGIN") && !login[1].isBlank()) {
+                if (login.length == 2 && login[0].equals("LOGIN") || !(login[1] == "")) {
                     utente = login[1];
                     success = true;
-                    out.println("LOGIN OK " + utente);
+                    out.println("OK");
                 } else {
                     out.println("ERR LOGINREQUIRED");
                 }
             }
 
             // --- LOOP PRINCIPALE ---
+            String[] cmd = {"", ""};
             while (true) {
-                String cmd = in.readLine();
-                if (cmd == null) {
+                // String cmd = in.readLine().substring(0, 3);
+                String linea = in.readLine();
+                cmd = linea.split(" ", 2);
+                if (cmd[0].equals("QUIT")) {
                     break;
                 }
 
-                switch (cmd) {
+                switch (cmd[0]) {
                     case "ADD":
-                        String testo = in.readLine();
-                        if (testo != null) {
+                        // String testo = in.readLine();
+                        if (cmd[1] != null) {
                             synchronized (lavagna) {
-                                lavagna.add(new Messaggio(testo, utente));
+                                lavagna.add(new Messaggio(cmd[1], utente));
                             }
-                            out.println("MSG ADDED");
+                            out.println("OK");
                         }
                         break;
 
@@ -72,16 +75,17 @@ public class MioThread extends Thread {
                         }
                         break;
 
-                    case "VIEW":
+                    case "LIST":
                         synchronized (lavagna) {
                             if (lavagna.isEmpty()) {
-                                out.println("BOARD EMPTY");
+                                out.println("BOARD:\nEND");
                             } else {
                                 out.println("BOARD:");
                                 for (int i = 0; i < lavagna.size(); i++) {
                                     Messaggio m = lavagna.get(i);
                                     out.println(i + ") " + m.getAutore() + ": " + m.getTesto());
                                 }
+                                out.println("END");
                             }
                         }
                         break;
